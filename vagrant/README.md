@@ -1,7 +1,7 @@
 1. https://cloud.mail.ru/public/fPCj/gVtQstDa3
 
-2. PS E:\vagrant> vagrant version  
-Installed Version: 2.2.19   
+2. ```PS E:\vagrant> vagrant version``` 
+```Installed Version: 2.2.19
 
 3. Windows terminal installed
 
