@@ -3,9 +3,10 @@
 1. Какой системный вызов делает команда `cd`? В прошлом ДЗ мы выяснили, что `cd` не является самостоятельной  программой, это `shell builtin`, поэтому запустить `strace` непосредственно на `cd` не получится. Тем не менее, вы можете запустить `strace` на `/bin/bash -c 'cd /tmp'`. В этом случае вы увидите полный список системных вызовов, которые делает сам `bash` при старте. Вам нужно найти тот единственный, который относится именно к `cd`. Обратите внимание, что `strace` выдаёт результат своей работы в поток stderr, а не в stdout.
 
 Ответ:  
-``vagrant@vagrant:/tim$ strace /bin/bash -c 'cd /tmp'
-execve("/bin/bash", ["/bin/bash", "-c", "cd /tmp"], 0x7ffef37ab330 /* 24 vars */) = 0``  
-
+```
+vagrant@vagrant:/tim$ strace /bin/bash -c 'cd /tmp'
+chdir("/tmp")
+```
 
 
 
@@ -87,10 +88,11 @@ PID    COMM               FD ERR PATH
 Ответ:
 ```
 vagrant@vagrant:~$ strace uname -a
-execve("/usr/bin/uname", ["uname", "-a"], 0x7fff35b2cbe8 /* 23 vars */) = 0
+write(1, "Linux vagrant 5.4.0-89-generic #"..., 107Linux vagrant 5.4.0-89-generic #100-Ubuntu SMP Fri Sep 24 14:50:10 UTC 2021 x86_64 x86_64 x86_64 GNU/Linux  
+
 
 ```
-В man по uname ничего нет про `/proc`
+Part of the utsname information is also accessible via /proc/sys/kernel/{ostype, hostname, osrelease, version, domainname}.
 
 
 7.Чем отличается последовательность команд через `;` и через `&&` в bash? Например:
