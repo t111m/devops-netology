@@ -7,6 +7,9 @@
     * удостоверьтесь, что с помощью systemctl процесс корректно стартует, завершается, а после перезагрузки автоматически поднимается.
 
 Ответ:
+Добавил $EXTRA_OPTS
+systemd будет подгружать переменные окружения при старте node explorer из файла /etc/default/node_explorer, а параметры запуска искать в переменной EXTRA_OPTS
+или в EnvironmentFile можно задать  переменную MY_OPTIONS="-h" в ExecStart указать основную команду ExecStart=home/vagrant/node_exporter-1.3.0.linux-amd64/node_exporter $MY_OPTIONS
 ```
 vagrant@vagrant:~$ sudo systemctl enable node_exporter.service
 vagrant@vagrant:~$ ps -e | grep node_exporter
@@ -22,7 +25,7 @@ vagrant@vagrant:~$ cat /etc/systemd/system/node_exporter.service
 Description=Node Exporter
 
 [Service]
-ExecStart=/home/vagrant/node_exporter-1.3.0.linux-amd64/node_exporter
+ExecStart=ExecStart=home/vagrant/node_exporter-1.3.0.linux-amd64/node_exporter -f -P $MY_OPTIONS  или $EXTRA_OPTS
 EnvironmentFile=/etc/default/node_exporter
 
 [Install]
