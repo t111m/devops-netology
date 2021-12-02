@@ -34,10 +34,11 @@ WantedBy=default.target
 vagrant@vagrant:~$ sudo cat /proc/1079/environ
 LANG=en_US.UTF-8PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:
 /bin:/snap/binINVOCATION_ID=db56e3bbc1454714a6acc059387d5ed5JOURNAL_STREAM=9:28963
-Myvar=Tim  
+  
 
-vagrant@vagrant:~$ cat /etc/default/node_exporter
-Myvar=Tim
+tsudo cat /etc/default/node_explorer
+MY_OPTIONS="-h"
+
 
 ```
 
