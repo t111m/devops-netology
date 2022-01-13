@@ -63,14 +63,137 @@ Vault v1.9.2 (f4c6d873e2767c0d6853b5d9ffc77b0d297bfbdf)
 ```
 4. Cоздайте центр сертификации по инструкции ([ссылка](https://learn.hashicorp.com/tutorials/vault/pki-engine?in=vault/secrets-management)) и выпустите сертификат для использования его в настройке веб-сервера nginx (срок жизни сертификата - месяц).
 ```shell
-tim@tim:~$ vault write pki_int/issue/example-dot-com common_name="test.example.com" ttl="730h"Key                 Value
+tim@tim:~$ export VAULT_ADDR=http://127.0.0.1:8200
+tim@tim:~$ export VAULT_TOKEN=root
+tim@tim:~$ vault secrets enable pki
+Success! Enabled the pki secrets engine at: pki/
+tim@tim:~$ vault secrets tune -max-lease-ttl=87600h pki
+Success! Tuned the secrets engine at: pki/
+tim@tim:~$ vault write -field=certificate pki/root/generate/internal \
+>      common_name="example.com" \
+>      ttl=87600h > CA_cert.crt
+tim@tim:~$ vault write pki/config/urls \
+>      issuing_certificates="$VAULT_ADDR/v1/pki/ca" \
+>      crl_distribution_points="$VAULT_ADDR/v1/pki/crl"
+Success! Data written to: pki/config/urls
+tim@tim:~$ vault secrets enable -path=pki_int pki
+Success! Enabled the pki secrets engine at: pki_int/
+tim@tim:~$ vault secrets tune -max-lease-ttl=43800h pki_int
+Success! Tuned the secrets engine at: pki_int/
+tim@tim:~$ vault write -format=json pki_int/intermediate/generate/internal \
+>      common_name="example.com Intermediate Authority" \
+>      | jq -r '.data.csr' > pki_intermediate.csr
+tim@tim:~$ vault write -format=json pki/root/sign-intermediate csr=@pki_intermed                                                                                                                                                             iate.csr \
+>      format=pem_bundle ttl="43800h" \
+>      | jq -r '.data.certificate' > intermediate.cert.pem
+tim@tim:~$ vault write pki_int/intermediate/set-signed certificate=@intermediate                                                                                                                                                             .cert.pem
+Success! Data written to: pki_int/intermediate/set-signed
+tim@tim:~$ vault write pki_int/roles/example-dot-com \
+>      allowed_domains="example.com" \
+>      allow_subdomains=true \
+>      max_ttl="740h"
+Success! Data written to: pki_int/roles/example-dot-com
+tim@tim:~$ vault write pki_int/issue/example-dot-com common_name="test.example.c                                                                                                                                                             om" ttl="720h"
+Key                 Value
 ---                 -----
 ca_chain            [-----BEGIN CERTIFICATE-----
+MIIDpjCCAo6gAwIBAgIUK3ks87DCjns2g7WAKLmo1zdM1CQwDQYJKoZIhvcNAQEL
+BQAwFjEUMBIGA1UEAxMLZXhhbXBsZS5jb20wHhcNMjIwMTEzMDc0NzE1WhcNMjcw
+MTEyMDc0NzQ1WjAtMSswKQYDVQQDEyJleGFtcGxlLmNvbSBJbnRlcm1lZGlhdGUg
+QXV0aG9yaXR5MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAsRfeyN+F
+lAe+fLhWVxDfsb23oCprvb5hgAtLeVGlMeSDJ2UeXjwrxYZzR8H9/bhIPfi+QMz5
+bsFcpQL/MgLkyGNcv37+hTk/CFDzNRtnXQSIULe7h3pcZ6zg1NsBDhWPXiHdAy6H
+4aL6yhRyRr4DHe0Xea429Xq2VD7nZw2WNKnrTCCaOIigezZqYfGTSTvuHdvDSvLD
+jlN4JfJUv07wzk2D462QOtiWDPY+kxs0v8zo/5JA4vPocihuUIajLfTdJeLFzz/9
+q4d7K1gSMe0zfPrFhLA/ahUMpwqp3krB4xGk6YnKOuvVUDAqNFknGadYVwU0cvne
+EQdmg/mVDM/L0wIDAQABo4HUMIHRMA4GA1UdDwEB/wQEAwIBBjAPBgNVHRMBAf8E
+BTADAQH/MB0GA1UdDgQWBBSGiiB8s/wrHZ5PJp5ZJ72wDXfEzTAfBgNVHSMEGDAW
+gBQdLCzsiHUdOri9k5nJxZaevsXbdzA7BggrBgEFBQcBAQQvMC0wKwYIKwYBBQUH
+MAKGH2h0dHA6Ly8xMjcuMC4wLjE6ODIwMC92MS9wa2kvY2EwMQYDVR0fBCowKDAm
+oCSgIoYgaHR0cDovLzEyNy4wLjAuMTo4MjAwL3YxL3BraS9jcmwwDQYJKoZIhvcN
+AQELBQADggEBAK6WMAxehaBiZQ+Nv6TNqDraSX+uxwOH4fGRgH49mgZrANrhu6Wt
+rV0Iki8Gsg/VH5O5MLolLwLbedXQQ5PeynoC6Kr7ruFwTXAYHcXTDG4PRuVoOcKF
+yhGgfHTg9CuPK9req0u1r5haP0zWq0HfoWbpinMWm40dmx78GE2BswLzuA54pjwT
+DXzHiM4mdTJco1leMR0QeCGogc4hyYU5KaUJRBRdLEh1v/Hy1Kn5tXaxUxrQrSpx
+e313iVQKmCUHSS2QAyVBY7SQ1DxcZWwGzIBmrnZ4SLxaoMf0c3CVR3DUfavp31v7
+xstLR68wnDtj7BgcrCI9ipkH/2xUCZXvIzQ=
 -----END CERTIFICATE-----]
 certificate         -----BEGIN CERTIFICATE-----
-...
+MIIDZjCCAk6gAwIBAgIUGROOtSpDOFJp5BUALSfXjcMsTJwwDQYJKoZIhvcNAQEL
+BQAwLTErMCkGA1UEAxMiZXhhbXBsZS5jb20gSW50ZXJtZWRpYXRlIEF1dGhvcml0
+eTAeFw0yMjAxMTMwNzQ3NTVaFw0yMjAyMTIwNzQ4MjVaMBsxGTAXBgNVBAMTEHRl
+c3QuZXhhbXBsZS5jb20wggEiMA0GCSqGSIb3DQEBAQUAA4IBDwAwggEKAoIBAQDS
+H7LL/cfhkO4jjvZO3b8sCxCgWmuBZseIRD1msR8lvkYH04g9CUQd9/upYjHiw45/
+34Fn4Rv1eGor5TotN8/HnOCm0S5f10k+hpb46jfvSpaHoVK4iYM+dOou8My9XBy5
+WdabVUcEaJZrnzFWQ8i0/oQLx/YbNtoapAeAMi8WP4+vP7Mq5ZvKBmExG2doxQyx
+VG8f1LEBy6MwiGMZJQ9YPyY6F41JtqBA//7YU/9DVI8ejd6wUAooltGYVK2qCZrr
+uzSJVtagSx3zdsWGXdQ6rG0TLB7y4vnXZge0yLCzHXQD2xFbfNNbGCeOHZDvN/2c
+a96glhJwYt6hRnqRCVTfAgMBAAGjgY8wgYwwDgYDVR0PAQH/BAQDAgOoMB0GA1Ud
+JQQWMBQGCCsGAQUFBwMBBggrBgEFBQcDAjAdBgNVHQ4EFgQU+iz2QunNHevdRadS
+BQUVrOMavJ8wHwYDVR0jBBgwFoAUhoogfLP8Kx2eTyaeWSe9sA13xM0wGwYDVR0R
+BBQwEoIQdGVzdC5leGFtcGxlLmNvbTANBgkqhkiG9w0BAQsFAAOCAQEAGFlGno0W
+nchaUatSh7Z5P89C2IguIJ23KLRwHaS6WjZHZaQxTNMbQq+KOKFATuuxn00O3XF1
+gtr1SyR9CTR9q8gm5bNPygbb/hShdTwJZltLZsMXcqS0bw8ZZ4AxZTpwXHVOB0xc
+MO082KRKARL7tLTR1DkoJIyzj1xpN3DiuUrRtWMa1gJdQeT8k/swp00KcFaWJsOI
+GduolLes1yaI20Emz49PN8NSquxL06KNLPDXHyPRJRqnzhqAYbV/Hf8YITx3Crl5
+nkGrZPp2s5n4J4G//+33zAMCnB26dMBlpY7XrmYv3ohEvNzVJJ3x8rTCyyPrtTBu
+AaiyRTz1w8mrxA==
+-----END CERTIFICATE-----
+expiration          1644652105
+issuing_ca          -----BEGIN CERTIFICATE-----
+MIIDpjCCAo6gAwIBAgIUK3ks87DCjns2g7WAKLmo1zdM1CQwDQYJKoZIhvcNAQEL
+BQAwFjEUMBIGA1UEAxMLZXhhbXBsZS5jb20wHhcNMjIwMTEzMDc0NzE1WhcNMjcw
+MTEyMDc0NzQ1WjAtMSswKQYDVQQDEyJleGFtcGxlLmNvbSBJbnRlcm1lZGlhdGUg
+QXV0aG9yaXR5MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAsRfeyN+F
+lAe+fLhWVxDfsb23oCprvb5hgAtLeVGlMeSDJ2UeXjwrxYZzR8H9/bhIPfi+QMz5
+bsFcpQL/MgLkyGNcv37+hTk/CFDzNRtnXQSIULe7h3pcZ6zg1NsBDhWPXiHdAy6H
+4aL6yhRyRr4DHe0Xea429Xq2VD7nZw2WNKnrTCCaOIigezZqYfGTSTvuHdvDSvLD
+jlN4JfJUv07wzk2D462QOtiWDPY+kxs0v8zo/5JA4vPocihuUIajLfTdJeLFzz/9
+q4d7K1gSMe0zfPrFhLA/ahUMpwqp3krB4xGk6YnKOuvVUDAqNFknGadYVwU0cvne
+EQdmg/mVDM/L0wIDAQABo4HUMIHRMA4GA1UdDwEB/wQEAwIBBjAPBgNVHRMBAf8E
+BTADAQH/MB0GA1UdDgQWBBSGiiB8s/wrHZ5PJp5ZJ72wDXfEzTAfBgNVHSMEGDAW
+gBQdLCzsiHUdOri9k5nJxZaevsXbdzA7BggrBgEFBQcBAQQvMC0wKwYIKwYBBQUH
+MAKGH2h0dHA6Ly8xMjcuMC4wLjE6ODIwMC92MS9wa2kvY2EwMQYDVR0fBCowKDAm
+oCSgIoYgaHR0cDovLzEyNy4wLjAuMTo4MjAwL3YxL3BraS9jcmwwDQYJKoZIhvcN
+AQELBQADggEBAK6WMAxehaBiZQ+Nv6TNqDraSX+uxwOH4fGRgH49mgZrANrhu6Wt
+rV0Iki8Gsg/VH5O5MLolLwLbedXQQ5PeynoC6Kr7ruFwTXAYHcXTDG4PRuVoOcKF
+yhGgfHTg9CuPK9req0u1r5haP0zWq0HfoWbpinMWm40dmx78GE2BswLzuA54pjwT
+DXzHiM4mdTJco1leMR0QeCGogc4hyYU5KaUJRBRdLEh1v/Hy1Kn5tXaxUxrQrSpx
+e313iVQKmCUHSS2QAyVBY7SQ1DxcZWwGzIBmrnZ4SLxaoMf0c3CVR3DUfavp31v7
+xstLR68wnDtj7BgcrCI9ipkH/2xUCZXvIzQ=
+-----END CERTIFICATE-----
+private_key         -----BEGIN RSA PRIVATE KEY-----
+MIIEpAIBAAKCAQEA0h+yy/3H4ZDuI472Tt2/LAsQoFprgWbHiEQ9ZrEfJb5GB9OI
+PQlEHff7qWIx4sOOf9+BZ+Eb9XhqK+U6LTfPx5zgptEuX9dJPoaW+Oo370qWh6FS
+uImDPnTqLvDMvVwcuVnWm1VHBGiWa58xVkPItP6EC8f2GzbaGqQHgDIvFj+Prz+z
+KuWbygZhMRtnaMUMsVRvH9SxAcujMIhjGSUPWD8mOheNSbagQP/+2FP/Q1SPHo3e
+sFAKKJbRmFStqgma67s0iVbWoEsd83bFhl3UOqxtEywe8uL512YHtMiwsx10A9sR
+W3zTWxgnjh2Q7zf9nGveoJYScGLeoUZ6kQlU3wIDAQABAoIBAGo8qpqmuhuaujxy
+OKhRRynOgl6AuOAZBgModV7paJUdqaylT7mEaNM6IRxX0F8VfoO6jmPmFcu7UPrW
+j95y3HPRJmhRVMASSi75v3UkfplWvdrfPsKcjCXU2N5Y0zteSguQl4e7ywc4lezd
+9QTnip+wGzUVqaHCzu0vR7eSJ+p312Af2PhWdPsRwVExds2qpOiuwHAsr8Ioy2fU
+jWkAWACFuLEQtxjDuwUZ4K8c/XXxqZpSem3oNRaxUTU8ipp7DokK1DtsgOlnD3vU
+Lh0hLTLb9nVy1VnoDkJIDvggod1Rd7IMcyZgmYtgtMP81+RSy7YrBPPYkAKv/AnO
+paGltkECgYEA2AekBPFWKUbDL/92xCsXPypmZTIJBH9XBVfWlcEQP6u+gFJXYwwv
+QVgtDK8rT/Dri+csZ50OP+3vyliSRqtt/0Q188bVOohL2eihTG7F5UFxBAydpZBW
+W/ybBmCF6EK8NaXhceowe1XNkNd11yJRK6CpkcQAZbLhdltMHtl87f8CgYEA+QBQ
+5Heqhj2lUw6nZVbml40JNcg1MhfBcHOZvdlmhWPBxr4G+uBe0ZxKlZCqj8rxLbWT
+ei2XA+GNriAvbrR05KAZzE3meDz9QgbVnM6St0baiCh4plwePfz8VWTb/S8/U5Ya
+Zw9Nz/dt1V+cFWvfpH5CqpIsAAQ8ng4w8FjPWSECgYEAoWWb+gFgcPgoLbz7u3XC
+KXQBCkvGhvCoUBqe/EVAYYFrky1xklNxHq3FAnwArPn+0QhGmaayFbsrco6Xwmqj
+hJougNGlTtSzbrspfxQnj69Dw1W1lhNvIcxo+eu1P6BUQvSKqXPhAtRI/5SpurAt
+2p1u8rNv5IsvfSCaj1XHy3sCgYEAhoORL5sl19c9lJz5+Vj0wTJDo3ZAposGyQTq
+LRFgvPajHAZUJvtGvd28vQel3IA5wgOxY/N0/Xe/3i0s8pUyAMAsr531v0bTWfPv
+OgKuZ6wzKhMS+mwROlOMzWTrIt9/SlxwbvRpiMuV3gsEet4HtwkuYo8MjgW76Xap
+IW4YtYECgYBFA4+48XjJz5ewgRxsAERb4V/K8XL894YdIUtVRyY+kihxmUQwE+f7
+q1GIuLF7CjMwfUNYr5BAgW3ReWOcoCnSeoXqpCB1D85+fcvaTvhgLwPXjYoUWPOS
+YAEBgb3YZ/9G3NZ9sgk2Xpm4XvqZylvpcRkzcSktQinVm2tyGstJ2g==
+-----END RSA PRIVATE KEY-----
+private_key_type    rsa
+serial_number       19:13:8e:b5:2a:43:38:52:69:e4:15:00:2d:27:d7:8d:c3:2c:4c:9c
 tim@tim:~$ ls
-CA_cert.crt  intermediate.cert.pem  pki_intermediate.csr  private.key  test.example.com.crt
+CA_cert.crt  intermediate.cert.pem  pki_intermediate.csr  private.key  test.example.com.crt  test.example.com.crt2
+
 
 ```
 
