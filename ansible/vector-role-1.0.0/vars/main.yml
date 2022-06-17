@@ -1,0 +1,2 @@
+---
+vector_home: "~/.vector-{{ vector_version }}"

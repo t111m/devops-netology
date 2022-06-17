@@ -1,0 +1,46 @@
+---
+- name: Get vector distrib
+  ansible.builtin.get_url:
+    url: "https://packages.timber.io/vector/{{ vector_version }}/vector-{{ vector_version }}-x86_64-unknown-linux-gnu.tar.gz"
+    dest: "/vector-{{ vector_version }}.tar.gz"
+
+- name: Create directory for Vector
+  file:
+    state: directory
+    path: "{{ vector_home }}"
+
+- name: extractor presents
+  ansible.builtin.yum:
+    name:
+      - unzip
+      - tar
+    state: present
+
+- name: Extract vector in directory
+  ansible.builtin.unarchive:
+    src: "/vector-{{ vector_version }}.tar.gz"
+    dest: "{{ vector_home }}"
+    extra_opts: [ --strip-components=2 ]
+    remote_src: yes
+
+- name: Create a symbolic link
+  ansible.builtin.file:
+    src: "{{ vector_home }}/bin/vector"
+    dest: "/usr/bin/vector"
+    owner: root
+    group: root
+    state: link
+  notify:
+    - Check succses install vector
+    - debug details
+
+- name: Copy config vector
+  template:
+    src: ../templates/vector.toml
+    dest: /home/centos/vector.toml
+    owner: root
+    group: root
+    mode: 0640
+
+- name: Start toml config file
+  ansible.builtin.shell: vector --config /home/centos/vector.toml &
